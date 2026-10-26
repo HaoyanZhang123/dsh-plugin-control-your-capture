@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-control-your-capture",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "把高清截屏与录屏装进 DSH：按物理像素采集，网页按目标尺寸光栅化。",
   "type": "module",
   "main": "lib/index.js",
@@ -47,5 +47,13 @@
   "author": {
     "name": "张灏焱",
     "email": "1814914856@qq.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HaoyanZhang123/dsh-plugin-control-your-capture.git"
+  },
+  "homepage": "https://github.com/HaoyanZhang123/dsh-plugin-control-your-capture#readme",
+  "bugs": {
+    "url": "https://github.com/HaoyanZhang123/dsh-plugin-control-your-capture/issues"
   }
 }

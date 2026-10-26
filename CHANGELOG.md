@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- README 图片改用 raw.githubusercontent 绝对地址，npm 页面也能正常显示。
+- 终端截图换成不含本机路径的输出实录；补充 repository/homepage/bugs 字段。
+
 ## 0.1.2
 
 - 缩放不再写死：page.mjs 新增 --target-width，按 目标宽/CSS宽 推导 device scale factor；
