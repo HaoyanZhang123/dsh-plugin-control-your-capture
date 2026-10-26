@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-control-your-capture",
   "version": "0.1.2",
-  "description": "高清截屏 / 录屏 —— 把 capture-sharp 技能装进 DSH：按物理像素抓屏、原生分辨率录屏、网页按目标尺寸光栅化（Windows / macOS / Linux）",
+  "description": "把高清截屏与录屏装进 DSH：按物理像素采集，网页按目标尺寸光栅化。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -18,7 +18,9 @@
     "PLUGIN.md",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "README.en.md",
+    "RELEASE-0.1.2.md"
   ],
   "license": "MIT",
   "dsh": {
