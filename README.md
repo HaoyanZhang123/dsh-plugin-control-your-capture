@@ -10,7 +10,7 @@
 | | 结果 |
 |---|---|
 | 声明了 DPI 感知的进程截图 | 3072×1920 |
-| 未声明的进程（\`powershell.exe\` 默认） | **1536×960**，被系统缩了一半 |
+| 未声明的进程（`powershell.exe` 默认） | **1536×960**，被系统缩了一半 |
 | 后者放大进 1080p 成片 | 必然发虚（实测锐度差 8 倍） |
 
 同类问题还有三处：录屏走 gdigrab 在 3K 上只有 ~19fps；网页按 1x 光栅化；后期先缩后放。
@@ -36,17 +36,17 @@
 
 ## 安装
 
-\`\`\`bash
+```bash
 # 方式一：从 npm 安装到当前 profile（推荐）
 dsh plugin add dsh-plugin-control-your-capture
 
 # 方式二：本地开发（link 到本仓库）
 cd <本仓库> && npm link
 dsh plugin add dsh-plugin-control-your-capture
-\`\`\`
+```
 
-装好后**重启一次 DSH**（或重开 profile），插件挂载时会把 \`skill/capture-sharp\` 复制到
-\`$DSH_HOME/skills/capture-sharp\`，随后任何工作区、任何会话都能看到这个技能。
+装好后**重启一次 DSH**（或重开 profile），插件挂载时会把 `skill/capture-sharp` 复制到
+`$DSH_HOME/skills/capture-sharp`，随后任何工作区、任何会话都能看到这个技能。
 
 ## 用起来
 
@@ -54,16 +54,16 @@ dsh plugin add dsh-plugin-control-your-capture
 
 也可以显式指定：
 
-\`\`\`
+```
 用 capture-sharp 截图，录 Windows 上那个浏览器窗口
-\`\`\`
+```
 
 脚本按平台自动选择：
 
 | 平台 | 截屏 | 录屏 | 网页 |
 |---|---|---|---|
-| Windows | \`scripts/shot.ps1\`（probe / full / window / region / scale） | \`scripts/rec.ps1\`（ddagrab 优先） | \`scripts/page.mjs\` |
-| macOS / Linux | \`scripts/capture.sh shot\` | \`scripts/capture.sh rec\` | \`scripts/page.mjs\` |
+| Windows | `scripts/shot.ps1`（probe / full / window / region / scale） | `scripts/rec.ps1`（ddagrab 优先） | `scripts/page.mjs` |
+| macOS / Linux | `scripts/capture.sh shot` | `scripts/capture.sh rec` | `scripts/page.mjs` |
 
 ## 平台支持与验证状态
 
@@ -73,7 +73,7 @@ dsh plugin add dsh-plugin-control-your-capture
 | macOS（screencapture / avfoundation） | 已实现，**未在真机验证**；首次录屏需给终端"屏幕录制"权限 |
 | Linux（X11 x11grab / Wayland grim） | 已实现，**未在真机验证**；缺工具时会明确报出要装什么 |
 
-在未验证平台上，脚本会先跑 \`probe\` 报告可用工具，缺什么直接告诉你，不会静默产出坏素材。
+在未验证平台上，脚本会先跑 `probe` 报告可用工具，缺什么直接告诉你，不会静默产出坏素材。
 
 ## 依赖
 
@@ -93,21 +93,21 @@ dsh plugin add dsh-plugin-control-your-capture
 
 ## 配置
 
-默认装到 \`$DSH_HOME/skills\`。要换位置，二选一：
+默认装到 `$DSH_HOME/skills`。要换位置，二选一：
 
-- 环境变量 \`DSH_CAPTURE_SKILL_ROOT\`
-- \`cordis.patch.yml\` 里给本插件行加 \`config: { skillRoot: '...' }\`
+- 环境变量 `DSH_CAPTURE_SKILL_ROOT`
+- `cordis.patch.yml` 里给本插件行加 `config: { skillRoot: '...' }`
 
 ## 卸载
 
-\`\`\`bash
+```bash
 dsh plugin remove dsh-plugin-control-your-capture
 rm -rf "$DSH_HOME/skills/capture-sharp"     # 插件不会自动删（避免误删你自己放的同名技能）
-\`\`\`
+```
 
 ## 设计要点
 
-- **零运行时依赖**：只用 \`node:fs/path/os\`，装完即用，Windows/macOS/Linux 一致。
-- **不抢 skill provider**：不注册第二个 \`skill-filesystem\`，只落目录，避免 providerName 冲突。
+- **零运行时依赖**：只用 `node:fs/path/os`，装完即用，Windows/macOS/Linux 一致。
+- **不抢 skill provider**：不注册第二个 `skill-filesystem`，只落目录，避免 providerName 冲突。
 - **覆盖策略保守**：只覆盖带本插件 marker 的副本；你自己放的同名 skill 一律不动。
 - **版本升级整目录替换**：避免旧脚本残留造成"以为更新了其实没更新"。
