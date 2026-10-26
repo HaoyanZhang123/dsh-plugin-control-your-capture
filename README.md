@@ -1,5 +1,9 @@
 <p align="center"><a href="./README.md">中文</a> | <a href="./README.en.md">English</a></p>
 
+<p align="center">
+  <img src="./assets/cover.webp" alt="封面：一台屏幕从模糊变清晰，标题「高清截录台」 | Cover: a screen sharpening from blurry to crisp" width="100%">
+</p>
+
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
 <p align="center">把高清截屏与录屏装进 DSH：按物理像素采集，按目标尺寸缩放。</p>
@@ -19,6 +23,8 @@
 在一台 3072×1920、系统缩放 200% 的 Windows 上实测：未声明 DPI 感知的进程只能采到 1536×960，
 再放进 1080p 成片就必须放大，文字锐度实测相差 8 倍；同一块屏幕上 gdigrab 录屏只有约 19 fps，
 而 Desktop Duplication 可以跑到约 58 fps。
+
+![同一块屏幕区域：左侧为原生 3072×1920，右侧为按 2:1 采样后放大 2 倍的结果](./assets/dpi-compare.webp)
 
 本插件把这件事固定成脚本与技能：挂载时把 capture-sharp 安装到 DSH 全局技能目录，
 之后任何工作区、任何会话都能直接用；agent 照着脚本调，不必每次重新发明采集方式。
@@ -58,6 +64,8 @@ dsh plugin add dsh-plugin-control-your-capture
 ## 使用方式
 
 装好后可以直接用自然语言触发：「截个图」「录一段屏」「这个画面好糊」「给演示视频抓点素材」。
+
+![终端实录：probe 报告能力，截图输出 3072×1920，录屏走 ddagrab](./assets/shot-terminal.webp)
 
 ```powershell
 # Windows：先自检，再截图

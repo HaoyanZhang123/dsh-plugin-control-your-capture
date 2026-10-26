@@ -20,7 +20,8 @@
     "CHANGELOG.md",
     "LICENSE",
     "README.en.md",
-    "RELEASE-0.1.2.md"
+    "RELEASE-0.1.2.md",
+    "assets"
   ],
   "license": "MIT",
   "dsh": {

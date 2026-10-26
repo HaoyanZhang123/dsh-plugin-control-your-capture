@@ -1,5 +1,9 @@
 <p align="center"><a href="./README.md">中文</a> | <a href="./README.en.md">English</a></p>
 
+<p align="center">
+  <img src="./assets/cover.webp" alt="Cover: a screen sharpening from blurry to crisp | 封面：一台屏幕从模糊变清晰" width="100%">
+</p>
+
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
 <p align="center">High-fidelity screenshots and screen recording for DSH, captured at native pixels and scaled to a target size.</p>
@@ -17,6 +21,8 @@
 Blurry captures on high-DPI screens are usually a sampling problem, not an encoding one: the panel has far more physical pixels than the logical desktop exposes.
 
 Measured on a 3072x1920 Windows display at 200% scaling: a process without DPI awareness captures only 1536x960, which then has to be upscaled into a 1080p timeline — text sharpness differed by roughly 8x. Recording shows the same pattern on that display: gdigrab reached about 19 fps while Desktop Duplication reached about 58 fps.
+
+![Same screen region: native 3072x1920 on the left, a 2:1 downsample upscaled 2x on the right](./assets/dpi-compare.webp)
 
 This plugin packages the fix as a skill. On mount it installs capture-sharp into the DSH global skill directory, so every workspace and session can use it, and the agent calls these scripts instead of reinventing capture code each time.
 
@@ -53,6 +59,8 @@ Restart DSH once. On mount the plugin copies the skill into `$DSH_HOME/skills/ca
 ## Usage
 
 Once installed, plain language works: "take a screenshot", "record the screen", "this looks blurry", "grab assets for the demo video".
+
+![Terminal run: probe reports capabilities, capture outputs 3072x1920, recording uses ddagrab](./assets/shot-terminal.webp)
 
 ```powershell
 # Windows: probe first, then capture
