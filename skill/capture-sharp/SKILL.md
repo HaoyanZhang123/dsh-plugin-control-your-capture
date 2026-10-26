@@ -1,6 +1,6 @@
 ---
 name: capture-sharp
-description: "高清截屏/录屏（Windows / macOS / Linux）：按物理像素抓全屏、窗口、区域，网页按 2x 光栅化，录屏保原生分辨率与高帧率，最后只做一次高质量缩放。Use when 用户说截图、录屏、屏幕录制、演示素材、画面发虚、模糊、不清晰、DPI、网页截图，or when producing screenshots/screen recordings for docs, demos or videos on high-DPI screens. Not for 成片剪辑/字幕/配音（在项目工作流里用 ffmpeg）。"
+description: "高清截屏/录屏（Windows / macOS / Linux）：按物理像素抓全屏、窗口、区域，网页按目标尺寸光栅化，录屏保原生分辨率与高帧率，最后只做一次高质量缩放。Use when 用户说截图、录屏、屏幕录制、演示素材、画面发虚、模糊、不清晰、DPI、网页截图，or when producing screenshots/screen recordings for docs, demos or videos on high-DPI screens. Not for 成片剪辑/字幕/配音（在项目工作流里用 ffmpeg）。"
 ---
 
 # capture-sharp
@@ -25,7 +25,8 @@ Windows 脚本用 PowerShell 5.1 即可；POSIX 脚本用 bash。网页截图全
    macOS/Linux 的 `output=` 必须等于屏幕物理分辨率（Retina 下是逻辑点数 ×2）。
 3. **素材像素 ≥ 成片像素**，缩放只做一次（Lanczos），禁止先缩后放。
 4. **录屏保原生分辨率**：Windows 走 ddagrab（gdigrab 在 3K 上只有 ~19fps）；macOS 走 avfoundation；Linux 走 x11grab。
-5. **网页按 `deviceScaleFactor: 2`**，不要 1x 抓完再放大。
+5. **网页缩放是算出来的，不是写死的**：`scale = 目标像素宽 / CSS 宽`（1080p 成片 + 960 宽视口 就是 2）。
+   用 `--target-width` 表达目标，别硬编码倍数，更不要 1x 抓完再放大。
 6. **Windows 的 .ps1 含中文必须存 UTF-8 BOM**，否则 PowerShell 5.1 按 GBK 解析直接语法错。
 
 ## 依赖与降级
@@ -33,7 +34,7 @@ Windows 脚本用 PowerShell 5.1 即可；POSIX 脚本用 bash。网页截图全
 | 能力 | Windows | macOS | Linux | 没有 ffmpeg 时 |
 |---|---|---|---|---|
 | 截图 | .NET GDI+，零依赖 | screencapture（系统自带） | grim / gnome-screenshot / ImageMagick | 不受影响 |
-| 网页 2x | Chrome/Edge + Node | 同左 | 同左 | 不受影响 |
+| 网页截图 | Chrome/Edge + Node | 同左 | 同左 | 不受影响 |
 | 录屏 | **需要 ffmpeg** | **需要 ffmpeg** | **需要 ffmpeg** | 不可用 |
 | 缩放 | GDI+ 内置 | sips（自带） | ImageMagick 或 ffmpeg | Linux 上需要 ImageMagick |
 
@@ -69,7 +70,9 @@ Windows：
 | 任意区域（物理像素） | `shot.ps1 -Mode region -X 600 -Y 200 -W 1600 -H 900 -Out shots\crop.png` |
 | 要小图 | `shot.ps1 -Scale 0.5 -Out shots\half.png` |
 | 录屏 | `rec.ps1 -Out rec\a.mp4 -Seconds 20` |
-| 录屏出 1080p | `rec.ps1 -Out rec\a1080.mp4 -Seconds 20 -To1080p` |
+| 录屏缩到指定尺寸 | `rec.ps1 -Out rec\a1080.mp4 -Seconds 20 -ScaleTo 1920x1080`（`-To1080p` 是别名） |
+
+`-ScaleTo` 是按比例装进目标框、不拉伸：16:10 的屏缩到 1920x1080 会得到 1728x1080。要精确 1920x1080，先用 `-Region` 裁成 16:9。
 
 macOS / Linux：
 
@@ -82,10 +85,11 @@ macOS / Linux：
 | 录屏出 1080p | `capture.sh rec --out f.mp4 --to1080p` |
 | macOS 录屏设备号 | `capture.sh rec --index 2`（先 probe 看 `SCREEN_DEVICE`） |
 
-全平台网页（2x）：
+全平台网页截图（缩放由目标尺寸推导）：
 
 ```bash
-node <skill>/scripts/page.mjs --url "https://example.com" --out pages/home.png --width 960 --height 540 --scale 2
+node <skill>/scripts/page.mjs --url "https://example.com" --out pages/home.png --width 960 --height 540 --target-width 1920
+# 等价：--scale 2（960 CSS x 2 = 1920）；要 4K 素材就 --target-width 3840（= 4x）
 ```
 
 **3) verify**（必须做）
@@ -93,7 +97,7 @@ node <skill>/scripts/page.mjs --url "https://example.com" --out pages/home.png -
 - 截图：回显 `output=` 必须等于屏幕物理分辨率。
 - 录屏：`ffprobe -v error -select_streams v:0 -show_entries stream=width,height,avg_frame_rate -of default=nw=1 out.mp4`
   —— `width` 必须是物理宽；`avg_frame_rate` 接近 60，掉到 20 说明走错了后端。
-- 网页：`expect=` 与 `output=` 必须一致（960×540 @2x → 1920×1080）。
+- 网页：`expect=` 与 `output=` 必须一致（CSS 960x540 + target 1920 → 1920x1080）。
 
 ## 输出契约
 

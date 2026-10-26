@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- 缩放不再写死：page.mjs 新增 --target-width，按 目标宽/CSS宽 推导 device scale factor；
+  --scale 保留为显式覆盖，两者都不给时才用默认 2 并在输出里标注 default。
+- rec.ps1 的 -To1080p 泛化为 -ScaleTo 1920x1080（任意 WxH），旧参数保留为别名。
+- capture.sh rec 同步支持 --scale-to WxH（--to1080p 仍是别名）。
+- 文档把「网页按 2x」改写成公式，避免把默认值当成规则。
+
 ## 0.1.1
 
 - `probe` 增加 `VIDEO_BACKEND=ffmpeg|none`，直接暴露有没有 ffmpeg。

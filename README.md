@@ -80,12 +80,16 @@ dsh plugin add dsh-plugin-control-your-capture
 | 能力 | Windows | macOS | Linux | 没有 ffmpeg 时 |
 |---|---|---|---|---|
 | 截图 | .NET GDI+（系统自带） | screencapture（系统自带） | grim / gnome-screenshot / ImageMagick | 正常 |
-| 网页 2x | Chrome/Edge + Node | 同左 | 同左 | 正常 |
+| 网页截图 | Chrome/Edge + Node | 同左 | 同左 | 正常 |
 | 录屏 | ffmpeg | ffmpeg | ffmpeg | **不可用**（脚本明确报错并给安装命令） |
 | 缩放 | 内置 | sips（自带） | ImageMagick 或 ffmpeg | Linux 上需要 ImageMagick |
 
 `probe` 会直接给结论：`VIDEO_BACKEND=ffmpeg` 或 `VIDEO_BACKEND=none`。
 **没有 ffmpeg 只影响录屏**，截图和网页 2x 照常工作。
+
+## 尺寸语义
+
+`-ScaleTo` 是按比例装进目标框、不拉伸：16:10 的屏缩到 1920x1080 会得到 1728x1080。要精确 1920x1080，先用 `-Region` 裁成 16:9。
 
 ## 配置
 

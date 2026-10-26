@@ -4,7 +4,12 @@
  * Cross-platform: finds Chrome / Edge / Chromium and drives it in headless mode.
  *
  *   node page.mjs --url <url|path> --out page.png [--width 960] [--height 540]
- *                 [--scale 2] [--browser <path>] [--timeout 4000] [--gpu]
+ *                 [--target-width 1920] [--scale 2] [--browser <path>] [--timeout 4000] [--gpu]
+ *
+ * Scale is derived, not fixed: scale = 目标像素宽 / CSS 宽。
+ *   --target-width 1920 with a 960-wide viewport -> scale 2
+ *   --target-width 3840 with a 960-wide viewport -> scale 4
+ * --scale overrides the derivation; with neither flag, 2 is used and reported as "default".
  *
  * Why: a 1x rasterization of a page on a high-DPI screen is as soft as a 1x screen grab.
  * 960x540 CSS at --scale 2 becomes 1920x1080 real pixels.
@@ -25,13 +30,22 @@ const url = arg('url');
 const out = arg('out');
 const width = Number(arg('width', 960));
 const height = Number(arg('height', 540));
-const scale = Number(arg('scale', 2));
+const scaleFlag = arg('scale', null);
+const targetWidth = Number(arg('target-width', 0));
+let scale = (scaleFlag === null || scaleFlag === true) ? null : Number(scaleFlag);
+let scaleWhy = 'explicit --scale';
+if (scale === null) {
+  if (targetWidth > 0) { scale = targetWidth / width; scaleWhy = 'target ' + targetWidth + '/css ' + width; }
+  else { scale = 2; scaleWhy = 'default 2 (no --scale / --target-width)'; }
+}
+if (!(scale > 0) || !isFinite(scale)) { console.error('page.mjs: scale must be a positive number'); process.exit(2); }
+scale = Math.round(scale * 100) / 100;
 const timeoutMs = Number(arg('timeout', 4000));
 const explicitBrowser = arg('browser');
 const useGpu = Boolean(arg('gpu', false));
 
 if (!url || !out) {
-  console.error('usage: node page.mjs --url <url|path> --out <file.png> [--width 960] [--height 540] [--scale 2]');
+  console.error('usage: node page.mjs --url <url|path> --out <file.png> [--width 960] [--height 540] [--target-width 1920 | --scale 2]');
   process.exit(2);
 }
 
@@ -101,5 +115,5 @@ const buf = readFileSync(out);
 const w = buf.readUInt32BE(16);
 const h = buf.readUInt32BE(20);
 const expect = Math.round(width * scale) + 'x' + Math.round(height * scale);
-console.log('page scale=' + scale + ' css=' + width + 'x' + height + ' expect=' + expect +
+console.log('page scale=' + scale + ' (' + scaleWhy + ') css=' + width + 'x' + height + ' expect=' + expect +
   ' output=' + w + 'x' + h + ' path=' + resolvePath(out));

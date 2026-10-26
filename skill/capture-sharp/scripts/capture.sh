@@ -4,7 +4,8 @@
 #
 #   ./capture.sh probe
 #   ./capture.sh shot --out f.png [--region x,y,w,h] [--scale 0.5] [--display N]
-#   ./capture.sh rec  --out f.mp4 [--seconds 20] [--fps 60] [--crf 14] [--region x,y,w,h] [--to1080p] [--index 1]
+#   ./capture.sh rec  --out f.mp4 [--seconds 20] [--fps 60] [--crf 14] [--region x,y,w,h] [--scale-to 1920x1080] [--index 1]
+#   (--to1080p 是 --scale-to 1920x1080 的别名)
 set -euo pipefail
 
 die() { echo "capture.sh: $*" >&2; exit 1; }
@@ -168,14 +169,24 @@ cmd_rec() {
   index=$(arg index "1" "$@")
   display=$(arg display "${DISPLAY:-:0.0}" "$@")
   to1080=$(arg to1080p "" "$@")
+  scale_to=$(arg scale-to "" "$@")
   [ -n "$out" ] || die "rec needs --out file.mp4"
   need ffmpeg "brew install ffmpeg  /  apt install ffmpeg"
   mkdir -p "$(dirname "$out")"
 
   [ -n "$region" ] && vf=$(crop_filter "$region")
-  if [ "$to1080" = "true" ] || has_flag to1080p "$@"; then
-    if [ -n "$vf" ]; then vf="$vf,scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos";
-    else vf="scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos"; fi
+  if [ -z "$scale_to" ] && { [ "$to1080" = "true" ] || has_flag to1080p "$@"; }; then
+    scale_to="1920x1080"
+  fi
+  if [ -n "$scale_to" ]; then
+    case "$scale_to" in
+      *x*) ;;
+      *) die "--scale-to must look like 1920x1080 (got $scale_to)" ;;
+    esac
+    local sz
+    sz=$(echo "$scale_to" | tr "x" ":")
+    if [ -n "$vf" ]; then vf="$vf,scale=$sz:force_original_aspect_ratio=decrease:flags=lanczos";
+    else vf="scale=$sz:force_original_aspect_ratio=decrease:flags=lanczos"; fi
   fi
 
   local enc=(-c:v libx264 -preset veryfast -crf "$crf" -pix_fmt yuv420p -movflags +faststart)

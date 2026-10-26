@@ -11,7 +11,7 @@
   用法 / usage:
     powershell -File rec.ps1 -Out a.mp4 -Seconds 20
     ... -Region 0,0,1920,1080        # 区域（物理像素）
-    ... -To1080p                     # 直接输出 1920x1080（Lanczos）
+    ... -ScaleTo 1920x1080           # 缩到指定尺寸（Lanczos）；-To1080p 是它的别名
     ... -Fps 60 -Crf 14
     ... -Backend dda|gdi|auto
 #>
@@ -23,6 +23,7 @@ param(
   [int]$Crf = 14,
   [string]$Preset = 'veryfast',
   [string]$Region = '',
+  [string]$ScaleTo = '',
   [switch]$To1080p,
   [switch]$DrawMouse,
   [ValidateSet('auto','dda','gdi')] [string]$Backend = 'auto',
@@ -75,6 +76,10 @@ if ($outDir -and -not (Test-Path $outDir)) { New-Item -ItemType Directory -Force
 
 $mouse = if ($DrawMouse) { '1' } else { '0' }
 
+if ($To1080p -and -not $ScaleTo) { $ScaleTo = '1920x1080' }
+if ($ScaleTo -and $ScaleTo -notmatch '^\d+x\d+$') { throw "-ScaleTo must look like 1920x1080 (got '$ScaleTo')" }
+$scaleExpr = if ($ScaleTo) { ($ScaleTo -replace 'x', ':') } else { '' }
+
 function Build-Dda {
   $bag = "ddagrab=0:framerate=" + $Fps + ":draw_mouse=" + $mouse
   $vf = @('hwdownload','format=bgra')
@@ -82,7 +87,7 @@ function Build-Dda {
     $pp = $Region.Split(',')
     $vf += ("crop=" + $pp[2] + ":" + $pp[3] + ":" + $pp[0] + ":" + $pp[1])
   }
-  if ($To1080p) { $vf += 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos' }
+  if ($scaleExpr) { $vf += ('scale=' + $scaleExpr + ':force_original_aspect_ratio=decrease:flags=lanczos') }
   $a = @('-hide_banner','-y','-loglevel','warning',
          '-f','lavfi','-i',$bag,'-vf',($vf -join ','),
          '-c:v','libx264','-preset',$Preset,'-crf',"$Crf",'-pix_fmt','yuv420p','-movflags','+faststart')
@@ -96,7 +101,7 @@ function Build-Gdi {
          '-offset_x',($offset.Split(',')[0]),'-offset_y',($offset.Split(',')[1]),
          '-video_size',$srcSize,'-draw_mouse',$mouse,'-i','desktop',
          '-c:v','libx264','-preset',$Preset,'-crf',"$Crf",'-pix_fmt','yuv420p','-movflags','+faststart')
-  if ($To1080p) { $a += @('-vf','scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos','-sws_flags','lanczos') }
+  if ($scaleExpr) { $a += @('-vf',('scale=' + $scaleExpr + ':force_original_aspect_ratio=decrease:flags=lanczos'),'-sws_flags','lanczos') }
   if ($Seconds -gt 0) { $a += @('-t',"$Seconds") }
   return $a + $Out
 }
