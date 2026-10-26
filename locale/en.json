@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Sharp capture",
+    "description": "Physical-pixel screenshots, native-resolution screen recording and 2x page rasterization. Fixes blurry captures on high-DPI screens."
+  }
+}

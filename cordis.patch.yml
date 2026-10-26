@@ -1,0 +1,4 @@
+# Add only our plugin row. Does not replace any official DSH component.
+- insert:
+    - id: capture-sharp
+      name: dsh-plugin-control-your-capture

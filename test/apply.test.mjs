@@ -1,0 +1,13 @@
+import { mkdtempSync, existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+const dir = mkdtempSync(join(tmpdir(), 'cap-apply-'));
+process.env.DSH_HOME = dir;
+const mod = await import('../lib/index.js?t=' + Date.now());
+console.log('exports:', Object.keys(mod).sort().join(','));
+console.log('name:', mod.name, '| inject:', JSON.stringify(mod.inject));
+const logs = [];
+mod.apply({ logger: { debug: (m) => logs.push(m) } }, {});
+console.log('installed:', existsSync(join(dir, 'skills', 'capture-sharp', 'SKILL.md')));
+console.log('tree:', readdirSync(join(dir, 'skills', 'capture-sharp')).sort().join(','));
+console.log('logger:', logs.join(' | ') || '(none)');

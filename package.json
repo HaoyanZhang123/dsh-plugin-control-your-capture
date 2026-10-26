@@ -1,0 +1,48 @@
+{
+  "name": "dsh-plugin-control-your-capture",
+  "version": "0.1.0",
+  "description": "高清截屏 / 录屏 —— 把 capture-sharp 技能装进 DSH：按物理像素抓屏、原生分辨率录屏、网页 2x 光栅化（Windows / macOS / Linux）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "skill",
+    "PLUGIN.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "screenshot",
+    "screen-recording",
+    "dpi",
+    "capture",
+    "deepseek-harness"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": {
+    "name": "张灏焱",
+    "email": "1814914856@qq.com"
+  }
+}
