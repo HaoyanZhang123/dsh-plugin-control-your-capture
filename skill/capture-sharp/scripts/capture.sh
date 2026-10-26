@@ -40,7 +40,13 @@ is_macos() { [ "$(os)" = "Darwin" ]; }
 is_linux() { [ "$(os)" = "Linux" ]; }
 
 ffprobe_dims() {
-  ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$1" 2>/dev/null || echo unknown
+  if have ffprobe; then
+    ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$1" 2>/dev/null || echo unknown
+  elif have file; then
+    file -b "$1" | sed -n "s/.*, \([0-9][0-9]*\) x \([0-9][0-9]*\),.*/\1x\2/p"
+  else
+    echo unknown
+  fi
 }
 
 crop_filter() {
@@ -54,6 +60,7 @@ crop_filter() {
 cmd_probe() {
   echo "OS=$(os)"
   echo "ARCH=$(uname -m)"
+  if have ffmpeg; then echo "VIDEO_BACKEND=ffmpeg"; else echo "VIDEO_BACKEND=none"; fi
   if is_macos; then
     echo "PLATFORM=macos"
     echo "MACOS_VERSION=$(sw_vers -productVersion 2>/dev/null || echo unknown)"

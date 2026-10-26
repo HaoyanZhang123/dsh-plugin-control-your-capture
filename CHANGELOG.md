@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- `probe` 增加 `VIDEO_BACKEND=ffmpeg|none`，直接暴露有没有 ffmpeg。
+- 缺 ffmpeg 时 `rec.ps1` 给出可读错误与三平台安装命令，不再抛 PowerShell 原始异常。
+- `capture.sh` 的尺寸校验在缺 ffprobe 时回退到 `file(1)`。
+- 文档补依赖矩阵：没有 ffmpeg 只影响录屏，截图与网页 2x 不受影响。
+
 ## 0.1.0
 
 首个版本。

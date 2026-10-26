@@ -31,6 +31,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+if (-not (Get-Command $Ffmpeg -ErrorAction SilentlyContinue)) {
+  throw "ffmpeg not found (looked for '$Ffmpeg'). Screen recording needs it: winget install Gyan.FFmpeg  /  brew install ffmpeg  /  apt install ffmpeg. Screenshots still work without it."
+}
+
 if (-not ("NativeRec" -as [type])) {
 Add-Type -TypeDefinition @"
 using System;

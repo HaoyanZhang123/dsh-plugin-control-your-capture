@@ -83,6 +83,10 @@ if ($Mode -eq 'probe') {
   } else {
     Write-Output "FFMPEG="
   }
+  if ($ff) { Write-Output "VIDEO_BACKEND=ffmpeg" } else {
+    Write-Output "VIDEO_BACKEND=none"
+    Write-Output "NOTE=no ffmpeg: screenshots and page capture still work; screen recording needs ffmpeg"
+  }
   $pf86 = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
   $cands = New-Object System.Collections.ArrayList
   [void]$cands.Add((Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'))

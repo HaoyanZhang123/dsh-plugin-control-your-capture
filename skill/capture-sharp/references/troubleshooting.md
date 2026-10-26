@@ -25,6 +25,7 @@
 | 全黑 | 驱动不支持 Desktop Duplication / 安全桌面 | `-Backend gdi` 兜底，并告知帧率下降 |
 | 没有鼠标 | 默认不画鼠标 | 加 `-DrawMouse` |
 | 文件巨大 | CRF 太低 + 60fps | 静态内容 `-Crf 16~18` 或 30fps |
+| 录屏直接报错 / probe 显示 VIDEO_BACKEND=none | 没装 ffmpeg | 装完再录：`winget install Gyan.FFmpeg` / `brew install ffmpeg` / `apt install ffmpeg`；截图不受影响 |
 
 ## 网页
 

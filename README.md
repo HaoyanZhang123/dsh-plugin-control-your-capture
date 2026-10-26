@@ -75,6 +75,18 @@ dsh plugin add dsh-plugin-control-your-capture
 
 在未验证平台上，脚本会先跑 \`probe\` 报告可用工具，缺什么直接告诉你，不会静默产出坏素材。
 
+## 依赖
+
+| 能力 | Windows | macOS | Linux | 没有 ffmpeg 时 |
+|---|---|---|---|---|
+| 截图 | .NET GDI+（系统自带） | screencapture（系统自带） | grim / gnome-screenshot / ImageMagick | 正常 |
+| 网页 2x | Chrome/Edge + Node | 同左 | 同左 | 正常 |
+| 录屏 | ffmpeg | ffmpeg | ffmpeg | **不可用**（脚本明确报错并给安装命令） |
+| 缩放 | 内置 | sips（自带） | ImageMagick 或 ffmpeg | Linux 上需要 ImageMagick |
+
+`probe` 会直接给结论：`VIDEO_BACKEND=ffmpeg` 或 `VIDEO_BACKEND=none`。
+**没有 ffmpeg 只影响录屏**，截图和网页 2x 照常工作。
+
 ## 配置
 
 默认装到 \`$DSH_HOME/skills\`。要换位置，二选一：

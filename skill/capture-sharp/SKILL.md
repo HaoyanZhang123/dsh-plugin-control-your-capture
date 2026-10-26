@@ -28,6 +28,18 @@ Windows 脚本用 PowerShell 5.1 即可；POSIX 脚本用 bash。网页截图全
 5. **网页按 `deviceScaleFactor: 2`**，不要 1x 抓完再放大。
 6. **Windows 的 .ps1 含中文必须存 UTF-8 BOM**，否则 PowerShell 5.1 按 GBK 解析直接语法错。
 
+## 依赖与降级
+
+| 能力 | Windows | macOS | Linux | 没有 ffmpeg 时 |
+|---|---|---|---|---|
+| 截图 | .NET GDI+，零依赖 | screencapture（系统自带） | grim / gnome-screenshot / ImageMagick | 不受影响 |
+| 网页 2x | Chrome/Edge + Node | 同左 | 同左 | 不受影响 |
+| 录屏 | **需要 ffmpeg** | **需要 ffmpeg** | **需要 ffmpeg** | 不可用 |
+| 缩放 | GDI+ 内置 | sips（自带） | ImageMagick 或 ffmpeg | Linux 上需要 ImageMagick |
+
+`probe` 里的 `VIDEO_BACKEND=none` 就表示没有 ffmpeg：**只做截图、不要承诺录屏**，
+先告诉用户装（Windows `winget install Gyan.FFmpeg`；macOS `brew install ffmpeg`；Linux `apt install ffmpeg`）。
+
 ## 三步
 
 **1) probe**
