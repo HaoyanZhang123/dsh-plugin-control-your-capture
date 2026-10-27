@@ -20,6 +20,13 @@
 
 ![高清截图台：把 capture_screenshot 装进 DSH——按物理像素截显示器、窗口或区域，自带 probe 环境检测](https://raw.githubusercontent.com/HaoyanZhang123/dsh-plugin-control-your-capture/main/assets/banner.webp)
 
+**用与不用的差别有多大**（本机实测，同一屏幕区域、同一时刻，只改采样分辨率、不做任何后期锐化）：
+
+![同一块屏幕区域：左为本插件按物理像素采集（800×500 锐利），右为按逻辑像素采集 400×250 再放大 2×（发虚）](https://raw.githubusercontent.com/HaoyanZhang123/dsh-plugin-control-your-capture/main/assets/compare-native-vs-logical.webp)
+
+受控锐度靶（8/9/10/16pt 中英细字 + 1px 线 + 4px/8px 棋盘格）上，文字带锐度（拉普拉斯方差）**小字 8/9/10pt 相差约 75×、16pt 大字约 28×**；
+右图的 1px 竖线已经糊成灰带、棋盘格退化成莫尔纹，这正是「按逻辑像素抓屏」的直接后果。
+
 本插件把这件事做成**工具**而不是脚本清单：挂载时注册 `capture_screenshot` 与 `capture_probe`，
 并把一份极薄的 `capture-sharp` 引导技能装到全局技能目录，任何工作区、任何会话都能直接用。
 

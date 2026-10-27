@@ -20,6 +20,13 @@ Measured on a 3072x1920 Windows display at 200% scaling: a process without DPI a
 
 ![Screenshot deck: capture_screenshot inside DSH — display, window or region captured at physical pixels, with probe diagnostics](https://raw.githubusercontent.com/HaoyanZhang123/dsh-plugin-control-your-capture/main/assets/banner.webp)
 
+**How large is the difference?** Measured on this machine — same screen region, same moment, only the sampling resolution differs, with no post-sharpening applied:
+
+![Same screen region: left is this plugin at physical pixels (800x500, sharp); right is a 400x250 logical-resolution capture upscaled 2x (blurry)](https://raw.githubusercontent.com/HaoyanZhang123/dsh-plugin-control-your-capture/main/assets/compare-native-vs-logical.webp)
+
+On a controlled sharpness target (8/9/10/16 pt Chinese and Latin text, 1 px lines, 4 px and 8 px checkerboards) the text-band sharpness (Laplacian variance) differs by **about 75x for 8/9/10 pt text and about 28x for 16 pt text**.
+On the right the 1 px vertical lines have smeared into a grey band and the checkerboards have collapsed into moire — that is what a logical-resolution capture does.
+
 This plugin ships the fix as a **tool**, not as a pile of scripts. On mount it registers `capture_screenshot` and `capture_probe` and installs a thin `capture-sharp` guidance skill into the global skill directory, so every workspace and session can use it.
 
 ## Features
