@@ -1,6 +1,6 @@
 # capture-sharp
 
-> 版本：0.2.1
+> 版本：0.2.2
 
 极薄的截图引导技能：只负责告诉 agent「优先调用哪个工具、失败怎么处理」，**不含任何脚本**。
 真正的采集由插件 Host 里的 `capture_screenshot` 完成，诊断由 `capture_probe` 完成。

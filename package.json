@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-control-your-capture",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "把截图工具装进 DSH：capture_screenshot 按物理像素抓显示器、窗口或区域，并把图直接返回给模型；永不放大。",
   "type": "module",
   "main": "lib/index.js",

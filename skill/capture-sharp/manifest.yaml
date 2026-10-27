@@ -1,5 +1,5 @@
 name: capture-sharp
-version: 0.2.1
+version: 0.2.2
 description: 按物理像素抓显示器、窗口与区域的清晰截图：优先调用 capture_screenshot，失败或需要环境事实时用 capture_probe
 always_load: []
 axes: {}

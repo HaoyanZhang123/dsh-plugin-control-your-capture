@@ -2,7 +2,7 @@
 
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
-> panel plugin v0.2.1 · skill v0.2.1
+> panel plugin v0.2.2 · skill v0.2.2
 
 <p align="center">A screenshot tool for DSH: capture a display, a window or a region at physical pixels; the result carries both a PNG on disk and an attachment reference.</p>
 
@@ -26,6 +26,21 @@ Measured on a 3072x1920 Windows display at 200% scaling: a process without DPI a
 
 On a controlled sharpness target (8/9/10/16 pt Chinese and Latin text, 1 px lines, 4 px and 8 px checkerboards) the text-band sharpness (Laplacian variance) differs by **about 75x for 8/9/10 pt text and about 28x for 16 pt text**.
 On the right the 1 px vertical lines have smeared into a grey band and the checkerboards have collapsed into moire — that is what a logical-resolution capture does.
+
+### Why is the gap this large?
+
+On a high-DPI display the panel has N× the logical resolution (N=2 at 200% scaling — four times the pixels).
+Capturing at logical resolution yields only 1/N of the real information: each source pixel is stretched over N×N physical pixels,
+so 1 px lines are averaged away in the very first sample and no later sharpening can bring them back.
+
+This plugin declares per-monitor DPI awareness and captures at physical pixels: one sample, 1:1 delivery, no upscale, no resampling.
+
+The ratio reaches 75× because the sharpness metric is superlinearly sensitive to high-frequency detail and the target is an extreme case
+(1 px lines, 8 pt text); ordinary body text (16 pt) measures about 28× — not every UI differs by 75×.
+
+**The trade-off is latency**: each call spawns a native helper process. Measured on Windows 11 at 3072x1920 / 200% scaling,
+median of 20 runs: about **812 ms** for a full display (p90 846 ms) and about **681 ms** for an 800x500 region (p90 700 ms).
+We win on fidelity, not on speed.
 
 This plugin ships the fix as a **tool**, not as a pile of scripts. On mount it registers `capture_screenshot` and `capture_probe` and installs a thin `capture-sharp` guidance skill into the global skill directory, so every workspace and session can use it.
 
