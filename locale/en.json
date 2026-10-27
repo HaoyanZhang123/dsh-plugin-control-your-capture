@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Sharp capture",
-    "description": "Physical-pixel screenshots, native-resolution screen recording and 2x page rasterization. Fixes blurry captures on high-DPI screens."
+    "title": "Sharp screenshots",
+    "description": "capture_screenshot grabs a display, a window or a region at physical pixels and hands the image straight to the model; unsupported environments fail loudly and nothing is ever upscaled."
   }
 }

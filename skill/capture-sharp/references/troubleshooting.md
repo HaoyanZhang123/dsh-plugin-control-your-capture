@@ -1,63 +1,51 @@
-# 症状 → 原因 → 修法
+# 症状 → 原因 → 修法（只覆盖截图）
 
-先跑 `shot.ps1 -Mode probe`，多数问题在这一步就能判定。
-本文件只管"抓得对不对"；成片编码、缩放、字幕参数属于项目工作流，不放这里。
+先调 `capture_probe`（不截图、不写图片）：显示器物理边界与 id、可用后端与缺失工具、权限、输出根可写性、每个目标的支持等级都在里面。
 
-## 截图
+## 错误码速查
 
-| 症状 | 原因 | 修法 |
+| code | 多半因为 | 怎么办 |
 |---|---|---|
-| 截图只有 1536×960 之类的小图 | 进程没声明 DPI 感知 | 用 `scripts/shot.ps1`，别手写 `CopyFromScreen` |
-| 尺寸对但文字仍软 | 抓完又缩了两次以上 | 只缩一次，`-Scale` / Lanczos |
-| 全黑 | 锁屏 / UAC 安全桌面 / 远程会话断开 | 保持会话解锁；RDP 最小化时抓不到 |
-| 窗口空白 | 用了 `PrintWindow`，Chromium/Electron 硬件加速下返回空 | 用 `-Mode window`（全屏抓取后裁窗口矩形） |
-| 窗口缺一圈 | 窗口矩形 vs 客户区 | 要内容用 `-Client`，要含边框用默认 |
-| 只抓到主屏 | 用了 `PrimaryScreen` | 脚本用 `VirtualScreen`，多屏（含负坐标）都覆盖 |
-| 别人的机器没这个现象 | 那台机器缩放 100%，naive 截图本来就等于物理像素 | 正常；本技能只在缩放 >100% 时才"救回"像素，同时仍改善录屏帧率与网页 2x |
-| 区域坐标对不上 | 把逻辑坐标当物理坐标 | `-Mode region` 全是物理像素；逻辑值 × (DPI/96) |
+| `invalid_argument` | `maxWidth<=0`、`window` 配了非 window、`region` 配了非 region、`out` 绝对路径/含 `..`/非 .png | 按 hint 改参数组合与取值 |
+| `invalid_region` | 缺 `region`、非整数、负坐标、宽高 ≤ 0、越出该显示器、跨屏 | 用 probe 的 `displays[].width/height` 重算；多屏分别截 |
+| `workspace_unavailable` | 没有调用方 agent、没有工作区服务、会话无绝对工作目录、目录不可写 | 让用户在有工作区的会话里调用；不要自己猜目录 |
+| `no_display` | headless、无会话桌面、会话 0、RDP 断开、无 `DISPLAY`/`WAYLAND_DISPLAY` | 如实报告；换有桌面的会话再试 |
+| `permission_required` | macOS 屏幕内容采集权限缺失、Wayland Portal 拒绝或需要交互 | 见下方「平台与权限」表；Wayland 完成授权对话框 |
+| `backend_unavailable` | 缺系统工具、后端未实现、没有附件服务 | 看 probe 的 `backends[].missing`，装上或换平台 |
+| `unsupported_target` | 该平台/会话不支持 `window`、`region` 或 `all` | 按 probe 的 `targets` 换目标；`all` 在 0.2.0 不存在 |
+| `window_not_found` | 窗口 id 不存在、已关闭、最小化、受保护内容、macOS 未给窗口 id | 给可解析的窗口 id 或换前台窗口；不要退化成全屏 |
+| `capture_timeout` | 后端超过 `timeoutMs`，已清理进程树 | 重试一次；仍超时用 `target:"region"` 缩小范围 |
+| `capture_failed` | 后端非零退出或原生调用异常 | 看 `details.exitCode` / `stderrTail`，再跑 probe |
+| `invalid_output` | 文件为空、不是 PNG、缺 IEND、尺寸不符、附件库拒收、父目录不可写 | 重试；连续失败按后端不可用处理 |
 
-## 录屏
+`quality_unverified` 与 `skill_shadowed` **不是**失败码：前者说明无法证明输出为原生质量（图仍然交付），后者说明引导技能被用户副本遮蔽（工具照常可用）。
 
-| 症状 | 原因 | 修法 |
+## 平台与权限
+
+| 现象 | 原因 | 修法 |
 |---|---|---|
-| 帧率只有 ~20，拖动发顿 | 走了 gdigrab | 确认 probe 的 `DDAGRAB=True`；别加 `-Backend gdi` |
-| 录成 1080p 但很软 | 用 `-video_size 1920x1080` 录 3K 屏 | 录原生分辨率；要 1080p 用 `-To1080p` |
-| 全黑 | 驱动不支持 Desktop Duplication / 安全桌面 | `-Backend gdi` 兜底，并告知帧率下降 |
-| 没有鼠标 | 默认不画鼠标 | 加 `-DrawMouse` |
-| 文件巨大 | CRF 太低 + 60fps | 静态内容 `-Crf 16~18` 或 30fps |
-| 录屏直接报错 / probe 显示 VIDEO_BACKEND=none | 没装 ffmpeg | 装完再录：`winget install Gyan.FFmpeg` / `brew install ffmpeg` / `apt install ffmpeg`；截图不受影响 |
+| Windows 截图全黑或直接 `no_display` | 锁屏、UAC 安全桌面、RDP 断开或会话 0 | 保持会话解锁并在交互桌面里调用；这些环境不承诺成功 |
+| Windows 尺寸比预期小一半 | 用了不声明 DPI 感知的旧采集方式 | 只用 `capture_screenshot`；本工具的后端按物理像素采集 |
+| Windows 多屏 / 混合 DPI / HDR 结果不确定 | 这些分支没有真机证据，只能是 experimental | 需要稳定结果时先只对单屏声明；如实说明等级 |
+| macOS 截图全黑或 `permission_required` | 首次调用前没有屏幕录制权限 | 授权后重试；权限只在真正截图时才可判定 |
+| macOS 窗口目标 `unsupported_target` | 无法非交互枚举窗口 id | 传显式窗口 id；拿不到就截显示器再裁区域 |
+| Linux X11 报 `no_display` | 没有 `DISPLAY`（SSH、CI、纯 Wayland） | 在图形会话里调用；Wayland 请走 Portal/grim |
+| Linux 报 `backend_unavailable` | 缺 maim / scrot / import（Wayland 还缺 Portal 或 grim） | 装上缺失工具；probe 会指出缺哪几个 |
+| Wayland 弹授权或无响应 | Portal 需要用户确认，且没有 region API | 完成授权；region 需要 grim，没有就截显示器 |
 
-## 网页
+## 尺寸与清晰度
 
-| 症状 | 原因 | 修法 |
+| 现象 | 原因 | 修法 |
 |---|---|---|
-| 页面文字比系统 UI 虚 | 1× 光栅化 | `page.ps1 -Scale 2` |
-| 截掉一截 | headless 只截视口 | 加大 `-Height`，或 CDP `captureBeyondViewport` |
-| 中文变方块 | 字体缺失 | 指定已安装字体 |
-| 图没出来 | 异步未完成 | 加 `-VirtualTimeBudgetMs 4000` |
-| 找不到浏览器 | 只有 Edge / 非标准安装 | 看 probe 的 `BROWSER=`，或 `-Browser <path>` |
+| 模型读不准细节 | 全屏大图进入模型时被附件库**按像素预算等比缩小**（本机 3072×1920 → 约 2590×1619，重编码为 JPEG 或 WebP，实测是 WebP；以 `image.width` / `image.height` 为准） | 用 `target:"region"` 裁出目标区域；`warnings` 里有 `model_image_downscaled` 就说明发生了降采样 |
+| 文件尺寸对但模型说看不清 | 把 `width`/`height`（文件）当成了 `image.width`/`image.height`（模型可见） | 分别读两对尺寸，按模型可见尺寸判断 |
+| 想放大却得不到更大的图 | 工具永不放大，`maxWidth` 只缩小 | 提高显示器分辨率或裁更小的区域，不要要求放大 |
+| 尺寸对但文字仍发虚 | 采集后被二次缩放 | 只用本工具，不要再手动缩放一次 |
+| 图整幅发黑或纯色，但调用是成功的 | 后端检测到近似单一颜色（受保护内容、空窗口、最小化） | 看 `warnings` 里的 `content_uniform`；图仍交付，但要如实告诉用户"这很可能不是想截的内容"，再换目标或让窗口可见 |
 
-## macOS / Linux 专有
+## 不要这样做
 
-| 症状 | 原因 | 修法 |
-|---|---|---|
-| `capture.sh: unsupported platform` | 在 Windows 上调用了 POSIX 脚本 | Windows 用 `shot.ps1` / `rec.ps1` |
-| macOS 截图全黑 / 弹权限窗 | 终端没有「屏幕录制」权限 | 系统设置 → 隐私与安全性 → 屏幕录制，勾选终端或 DSH 后重启终端 |
-| macOS 录屏录到摄像头 | `--index` 指错设备 | 先 `capture.sh probe` 看 `SCREEN_DEVICE=` 的编号 |
-| Linux 截图报 no screenshot tool | 缺工具 | Wayland: `apt install grim`；X11: `apt install gnome-screenshot` 或 imagemagick/ffmpeg |
-| Linux 录屏尺寸未知 | 无 `xrandr` 或纯 Wayland | 显式传 `--region x,y,w,h` |
-| Wayland 下 x11grab 录不到 | x11grab 只适用 X11 | 用 grim / wf-recorder，或切 X11 会话 |
-
-## 模型看不清
-
-| 症状 | 原因 | 修法 |
-|---|---|---|
-| 模型读不准细节 | 整屏图被规范化到 ~4.2MP（3072×1920 → ~2590×1619） | 用 `-Mode window` / `-Mode region` 裁区域再发 |
-| 同一张图说法不一 | 压缩/重采样差异 | 发 PNG、裁小、避免细字号 |
-
-## 交付前
-
-- [ ] probe 跑过，知道 `SCREEN_PHYSICAL` / `DDAGRAB`
-- [ ] 全屏截图 `output=` == `SCREEN_PHYSICAL`
-- [ ] 录屏 `width` == 物理宽，`avg_frame_rate` ≥ 50（或已如实说明）
-- [ ] 网页 `expect=` == `output=`
+- 手写 PowerShell、AppleScript 或任何采集命令绕过工具（那会成为第二套执行路径）。
+- 在 `no_display` / `permission_required` 下反复重试，或把失败写成「已截图」。
+- 把 `target:"all"` 当成可用目标。
+- 对外宣称「全平台支持」——没有真机实测的平台只能 experimental。

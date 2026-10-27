@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.2.0
+
+**破坏性重构**：从「安装一份截图/录屏脚本技能」改为「截图专用、Tool-first 的 DSH 插件」。录屏、网页截图与技能内脚本全部删除，旧参数不再兼容。
+
+### 删除（不可兼容）
+
+- 删除录屏能力：Windows 的 `rec.ps1`、macOS/Linux 的 `capture.sh rec`、ffmpeg / ddagrab 相关文档与断言。
+- 删除网页截图能力：`page.mjs`、`--target-width` / `--scale` 的尺寸推导、网页端到端检查（`smoke/page_e2e.py`）。
+- 删除技能内全部脚本：`.dsh/skills/capture-sharp/scripts/` 整个目录（`shot.ps1`、`rec.ps1`、`capture.sh`、`page.mjs`）。
+- 删除 `references/troubleshooting.md` 中的录屏、网页与帧率章节，只保留平台、权限与截图排错。
+- 删除 `package.json` 的 screen-recording 相关 keywords 与旧 description。
+
+### 新增
+
+- `capture_screenshot`：`display` / `window` / `region` 三类目标，缺省 `display`；PNG、原子写、每次调用唯一文件名、`maxWidth` 只缩小一次、永不放大。
+- `capture_probe`：只诊断不截图，报告显示器、可用后端与缺失工具、权限、输出根、技能健康度与各目标支持等级。
+- Host 拆分为 `lib/index.js`（生命周期）、`lib/service.js`（唯一采集路径）、`lib/tool.js`（schema 与结果渲染）、`lib/adapters/*`（平台后端）、`lib/native/windows-shot.ps1`、`lib/png.js`、`lib/paths.js`、`lib/provision-skill.js`。
+- 失败统一结构化：`code` + `message` + `details` + `hint`，共 11 个失败码；`quality_unverified` 与 `skill_shadowed` 只作警告/状态，不阻断截图。
+
+### 变更（语义与声明）
+
+- 尺寸语义拆开：`width` / `height` 是磁盘 PNG 的 IHDR 尺寸，`image.width` / `image.height` 是附件库归一化后模型可见的尺寸；降采样给 `model_image_downscaled`，被重编码再给 `attachment_reencoded`。
+- 支持等级如实声明：Windows 单屏 console 为 beta；macOS、Linux X11 与 Wayland 为 experimental（零真机）；`target:'all'` 为 unsupported；headless 返回 `no_display`。
+- 卸载残留写进文档：进程被杀死、插件目录被手工删除或 profile 被还原时，全局引导技能目录会残留，需要手动删除；不再宣称「会自动清理」。
+- 版本升到 0.2.0（`plugin/package.json` 与 `.dsh/skills/capture-sharp/manifest.yaml` 同步）。
+
+### 验收期修正（同属 0.2.0，未另起版本）
+
+- `warnings` 定为**封闭词表 7 个**（`active_display_unavailable`、`quality_unverified`、`model_image_downscaled`、`attachment_reencoded`、`out_renamed`、`skill_shadowed`、`content_uniform`），且**只去重保序、不再静默过滤**——后端报的告警必须到模型眼前。
+- 新增 `content_uniform`：后端检测到整幅近似单色时给出（图仍交付），避免"黑图按成功交付且零线索"。
+- 修正 `region` + `maxWidth`（小于区域宽）必然失败的问题：尺寸校验改成按 `native` / `scaled` 分层，并区分 `max_width_ignored`、`scaled_width_mismatch`、`scaled_height_mismatch` 三种原因。
+- `capture_probe` 不再把"后端探测失败"谎报成 `headless`：改为 `headless:false` + `quality_unverified` + `backends[].missing` 说明原因。
+- 桌面文档里的降采样示例按像素预算修正为 3072×1920 → 约 2590×1619（等比，而非固定尺寸），并注明"以 `image.width`/`image.height` 为准、真实数值待安装后 E2E"。
+
+### 装机实测后修正（2026-10-27，同属 0.2.0）
+
+- **修：重启后引导技能消失**。两个原因叠加：
+  1. `replaceWithVerifiedCopy` 原来**先 `rmSync(dest)` 再 `rename(tmp, dest)`**；Windows 上刚写出的目录可能被杀毒/文件监听器短暂占用，`rename` 偶发 `EPERM`，于是旧副本已删、新副本没就位 → 技能"凭空消失"。现在改为**先把旧目录 rename 成 `*.bak-*`**，新目录就位成功后才删；替换失败会把旧目录 rename 回来；`rename` 带 8 次退避重试（40ms 递增）。
+  2. cordis 的 dispose 在"应用正常退出/Electron 重启用新进程替换旧进程"时同样会执行，原实现在 dispose 里删技能，会与新进程 `apply` 的 provisioning 抢同一个全局目录。现改为**默认不删**，只有显式配置 `skillCleanupOnUnload: true` 才删；`removeProvisionedSkill()` 仍只删"带本插件 marker 且 hash 未变"的目录。
+- **实测归一化格式是 WebP 而不是 JPEG**：3072×1920 全屏 → 模型可见 `2590×1619 image/webp`，`warnings` 为 `model_image_downscaled, attachment_reencoded`（WebP/JPEG 取决于有无 alpha）。文档与技能里的 "JPEG" 表述已改成 "JPEG 或 WebP（实测 WebP）"。
+- 新增配置项 `skillCleanupOnUnload`（默认 `false`）。
+
+## 0.1.4
+
+- `page.mjs`：本地文件改用 node:url 的 `pathToFileURL` 转 URL（此前手拼 file: 前缀，在 Windows 上会拼错盘符路径）；
+  Windows 浏览器候选只从 `ProgramFiles` / `ProgramFiles(x86)` / `LOCALAPPDATA` 探测，不再写死 `C:` 盘符路径。
+- `references/troubleshooting.md`：网页排错按 `page.mjs` 真实参数重写——`--target-width` / `--scale`、`--timeout`、
+  `--browser` 与 `CHROME_PATH`、本地路径语义、`expect=`/`output=` 尺寸核对与退出码 2/3/4；删掉早已不存在的 `page.ps1` 写法。
+- 技能元数据：`manifest.yaml` 与技能 README 补版本号，与插件版本同源同步。
+- 内部验收：smoke 新增 `page_e2e.py`，用技能自带 `page.mjs` 在临时目录实跑 1920×1080 光栅化并复核 PNG IHDR（开发侧断言，不代表发布状态）。
+
 ## 0.1.3
 
 - README 图片改用 raw.githubusercontent 绝对地址，npm 页面也能正常显示。

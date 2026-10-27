@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-control-your-capture",
-  "version": "0.1.3",
-  "description": "把高清截屏与录屏装进 DSH：按物理像素采集，网页按目标尺寸光栅化。",
+  "version": "0.2.0",
+  "description": "把截图工具装进 DSH：capture_screenshot 按物理像素抓显示器、窗口或区域，并把图直接返回给模型；永不放大。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -12,16 +12,14 @@
   },
   "files": [
     "lib",
-    "cordis.patch.yml",
-    "locale",
     "skill",
+    "locale",
+    "cordis.patch.yml",
     "PLUGIN.md",
     "README.md",
-    "CHANGELOG.md",
-    "LICENSE",
     "README.en.md",
-    "RELEASE-0.1.2.md",
-    "assets"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "license": "MIT",
   "dsh": {
@@ -33,9 +31,8 @@
     "dsh",
     "dsh-plugin",
     "screenshot",
-    "screen-recording",
-    "dpi",
     "capture",
+    "dpi",
     "deepseek-harness"
   ],
   "publishConfig": {
