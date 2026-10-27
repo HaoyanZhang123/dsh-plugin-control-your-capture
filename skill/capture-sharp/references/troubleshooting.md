@@ -32,6 +32,7 @@
 | Linux X11 报 `no_display` | 没有 `DISPLAY`（SSH、CI、纯 Wayland） | 在图形会话里调用；Wayland 请走 Portal/grim |
 | Linux 报 `backend_unavailable` | 缺 maim / scrot / import（Wayland 还缺 Portal 或 grim） | 装上缺失工具；probe 会指出缺哪几个 |
 | Wayland 弹授权或无响应 | Portal 需要用户确认，且没有 region API | 完成授权；region 需要 grim，没有就截显示器 |
+| 抓浏览器 / Electron 窗口得到纯色图，`warnings` 带 `content_uniform` | 该窗口是 GPU 合成的，合成层抓不到（PrintWindow 返回空内容） | **别当成截到了**：改用 `target:"display"` 或 `target:"region"`；并把这一限制告诉用户 |
 
 ## 尺寸与清晰度
 

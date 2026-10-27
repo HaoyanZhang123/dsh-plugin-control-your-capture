@@ -2,7 +2,7 @@
 
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
-> 面板插件 v0.2.0 · skill v0.2.0
+> 面板插件 v0.2.1 · skill v0.2.1
 
 <p align="center">把截图工具装进 DSH：按物理像素抓显示器、窗口或区域，工具结果同时带磁盘 PNG 与附件引用。</p>
 
@@ -128,7 +128,7 @@ dsh plugin add dsh-plugin-control-your-capture
 - 全屏大图进入模型会被降采样，细字判读必须用 `target:"region"`。
 - 不注册 UI 卡片（`presentCall` / `presentResult`），结果只体现在工具文本与图片里。
 - 不修改 system prompt、不使用 `tools.restrict` / `tools.guard` 制造「优先」。
-- **`window` 采集可能把目标窗口带到前台**：Windows 上 `PrintWindow` 失败时会退回按窗口矩形抓屏，这时会**尝试激活**该窗口（`SetForegroundWindow` 可能被系统拒绝，所以是"尝试"而不是"一定"）；若不想被打断，请用 `target:"region"`。Wayland 下从 Portal 退到 grim 时，`backend` 字段会如实写成 `wayland-grim`。
+- **`target:"window"` 对 GPU 合成的窗口可能返回空白图**：部分浏览器 / Electron 窗口的合成层抓不到（`PrintWindow` 返回空内容，事件由 compositor 接管），结果是整幅纯色而非窗口内容。此时 `warnings` 会带 `content_uniform`——看到它就别把这次结果当成"截到了"，改用 `target:"display"` 或 `target:"region"`（本机 2026-10-27 实测：Chrome 窗口返回 2528×1936 的白色图，同窗口的 `display`/`region` 正常）。
 - 超时后虽然会清理整个进程树，但**真实采集超时在本机没有触发过**（只有机制级验证）；这一条在升级到 stable 前不会改口径。
 
 ## 从 0.1.x 迁移（破坏性）

@@ -2,7 +2,7 @@
 
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
-> panel plugin v0.2.0 · skill v0.2.0
+> panel plugin v0.2.1 · skill v0.2.1
 
 <p align="center">A screenshot tool for DSH: capture a display, a window or a region at physical pixels; the result carries both a PNG on disk and an attachment reference.</p>
 
@@ -121,6 +121,7 @@ When the plugin is disabled or removed while DSH is running, the `capture-sharp`
 - A full-screen image is downscaled before the model sees it; fine detail needs `target:"region"`.
 - No UI card is registered (`presentCall` / `presentResult`); results live in the tool text and image only.
 - The plugin does not modify the system prompt and does not use `tools.restrict` / `tools.guard` to manufacture priority.
+- **A `target:"window"` capture of a GPU-composited window can come back blank**: the compositor layer of some browser / Electron windows is not reachable through `PrintWindow`, so the result is a flat colour instead of the window content. That case carries the `content_uniform` warning — do not treat it as a successful capture; switch to `target:"display"` or `target:"region"` (measured 2026-10-27 on this machine: a Chrome window produced a plain white 2528x1936 image while `display`/`region` of the same window worked).
 - **A `window` capture may bring the target window to the foreground**: on Windows, when `PrintWindow` fails the backend falls back to capturing the window rectangle from the screen and will **try to** activate that window (`SetForegroundWindow` can be refused by the system, hence "try", not "always"). Use `target:"region"` if you do not want the focus change. On Wayland, falling back from the Portal to grim is reported honestly in the `backend` field as `wayland-grim`.
 - A timeout kills the whole process tree, but **a real capture timeout has never fired on this machine** (only mechanism-level verification); that wording will not change until the target is promoted to stable.
 
