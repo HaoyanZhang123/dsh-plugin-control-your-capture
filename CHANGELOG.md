@@ -19,7 +19,7 @@
 - 依赖外部 FFmpeg / FFprobe（`ffmpeg` 必须带 `ddagrab` 与 `libx264`）：缺失只影响录屏，截图照常可用；插件不静默下载或捆绑。
 - 没有 gdigrab、循环截图或低帧率回退；默认 `yuv420p` 有损 MP4，**不与 PNG 逐像素一致**，也没有无损模式。
 - 硬杀宿主后的孤儿进程与临时文件不保证清理（0.3.0 未实现 Job Object）；正常 stop / cancel / 卸载会尽力回收。
-- 实测只引用 T3 真机结果：display 3072×1920 请求 60fps → **57.80fps / 11.33s**；region 800×500 请求 60fps → **56.65fps**；长录制 800×500@30fps → **29.99fps / 126.43s**；max-duration → **2.57s** 自动 completed。不承诺任意负载、任意内容都满 60fps。
+- 实测只引用真机 E2E 结果：display 3072×1920 请求 60fps → **57.71fps / 11.35s / 655 帧**；region 800×500 请求 60fps → **56.56fps**；长录制 800×500@30fps → **29.99fps / 126.4s**；max-duration → 约 **2.1s** 自动 completed。多次完整 E2E 的 display/region 帧率区间为 **55.9–58.3fps**，逐次数值以 `windows-e2e.md` 为准；不承诺任意负载、任意内容都满 60fps。
 
 ### 升级
 
