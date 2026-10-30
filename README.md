@@ -2,9 +2,9 @@
 
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
-> 面板插件 v0.2.2 · skill v0.2.2
+> 面板插件 v0.3.0 · skill v0.3.0
 
-<p align="center">把截图工具装进 DSH：按物理像素抓显示器、窗口或区域，工具结果同时带磁盘 PNG 与附件引用。</p>
+<p align="center">把截图与录屏工具装进 DSH：按物理像素抓显示器、窗口或区域；也可以在 Windows 单屏 console 把屏幕或区域录成 MP4。</p>
 
 <p align="center">
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-%E2%89%A5%2018-339933?logo=nodedotjs&logoColor=white" alt="Node 18+"></a>
@@ -48,7 +48,8 @@
 | 能力 | 说明 |
 |---|---|
 | `capture_screenshot` | 抓 `display`、`window`、`region` 三类目标；默认 PNG、默认不缩放 |
-| `capture_probe` | 只诊断不截图：显示器、可用后端、权限、输出根、技能健康度、各目标的支持等级 |
+| `capture_probe` | 只诊断不截图：显示器、可用后端、权限、输出根、技能健康度、各目标的支持等级，以及录屏能力（`recording`） |
+| `capture_recording` | Windows 单屏 console 把 `display` 或物理像素 `region` 录成 MP4；`start` / `status` / `stop` / `cancel` 四动作，生命周期由 Host 托管 |
 | 原生清晰 | 按后端报告的物理像素采集；`maxWidth` 只允许一次缩小，**永不放大** |
 | 双通道交付 | 同一份字节既落盘为原生 PNG（`path`），又交给附件库（`image`）；模型可见尺寸可能被附件库归一化，以 `image.width` / `image.height` 为准 |
 | 并发安全 | 每次调用唯一文件名、同目录临时文件加原子重命名；不覆盖、不留半成品 |
@@ -69,15 +70,26 @@
 | Linux X11 | experimental | experimental | experimental | 零真机；需 maim / scrot / import 其一 |
 | Linux Wayland | experimental | unsupported | experimental | 零真机；需 XDG Portal 或 grim，可能弹授权 |
 | headless / CI | — | — | — | 一律 `no_display` |
-| 任意平台 + `target:"all"` | — | — | — | `unsupported_target`（0.2.0 不提供） |
+| 任意平台 + `target:"all"` | — | — | — | `unsupported_target`（0.3.0 不提供） |
 
 - 本矩阵与 `capture_probe` 返回的 `targets` 一致；两者不一致即为缺陷。
 - 只有实测通过的「平台 × 目标」才可能写 stable；**没有任何平台被声明为全平台支持**。
 - 本插件不屏蔽其它截图工具，也不强制任何 preset 或模型必须调用它。
 
+录制（`capture_recording`）：
+
+| 平台 / 会话 | display | region | 证据状态 |
+|---|---|---|---|
+| Windows 10/11 console（单屏，SDR） | **beta** | **beta** | 本机真机实测：3072×1920 @ 57.48fps、800×500 @ 57.45fps，1 video / 0 audio、`-xerror` 全文件解码通过、faststart 生效；长录制 279.6s 验证不被 120s 超时截断 |
+| Windows 多屏 / HDR / RDP / 会话 0 | unsupported | unsupported | 明确拒绝（`unsupported_target`），不静默降级 |
+| macOS / Linux | unsupported | unsupported | 0.3.0 不提供录制 |
+| `target:"window"` / `target:"all"` | — | — | `unsupported_target` |
+
+录屏依赖外部 **FFmpeg（需 ddagrab filter 与 libx264）** 和 **FFprobe**：`capture_probe.recording.missing` 会逐项列出缺失；缺它们**只影响录屏，截图照常可用**。
+
 ## 安装
 
-前提：已安装 DSH。包本身零运行时依赖；实际采集用系统自带能力（Windows 的 GDI、macOS 的 screencapture、Linux 的 maim / scrot / import 或 Portal / grim）。
+前提：已安装 DSH。包本身零运行时依赖；截图用系统自带能力（Windows 的 GDI、macOS 的 screencapture、Linux 的 maim / scrot / import 或 Portal / grim），**录屏额外需要外部 FFmpeg（带 ddagrab 与 libx264）与 FFprobe**。
 
 ```bash
 dsh plugin add dsh-plugin-control-your-capture
@@ -85,7 +97,7 @@ dsh plugin add dsh-plugin-control-your-capture
 
 - 新装 bundle 可经 HMR 生效；**替换已安装的包必须重启 DSH** 才会加载新的模块。
 - DSH 官方限制：已安装插件不支持自动更新，升级请先卸载再装新版。
-- 挂载时把 `capture-sharp` 装到全局技能目录（默认 `$DSH_HOME/skills`），并注册两个工具。
+- 挂载时把 `capture-sharp` 装到全局技能目录（默认 `$DSH_HOME/skills`），并注册三个工具。
 
 ## 使用
 
@@ -119,6 +131,31 @@ dsh plugin add dsh-plugin-control-your-capture
 
 其中 `content_uniform` 表示后端检测到整幅画面近似单一颜色（纯黑/纯色，常见于受保护内容或空窗口）——**图仍然交付**，但看到它就该怀疑"截到的不是用户想看的东西"。
 
+### 录屏：capture_recording
+
+| 参数 | 取值 | 说明 |
+|---|---|---|
+| `action` | `start` / `status` / `stop` / `cancel` | 必填 |
+| `recordingId` | `start` 返回的不透明 id | `status`/`stop`/`cancel` 必填；`start` 不允许传 |
+| `target` | `display` / `region` | 缺省 `display`；**不支持** `window` / `all` |
+| `display` | `capture_probe` 返回的不透明 id | 缺省为当前唯一显示器 |
+| `region` | `{x,y,width,height}` | **物理像素**、相对显示器左上角、宽高必须偶数、必须完整在屏内 |
+| `fps` | `30` / `60` | 缺省 60 |
+| `drawMouse` | boolean | 缺省 true |
+| `out` | 工作区内的相对 `.mp4` | 缺省 `output/capture/<uuid>.mp4`；已存在时改用唯一名并给 `out_renamed`，不覆盖 |
+
+- `start` 快速返回 `recordingId`；**`path` 只在 `completed` 出现**——`starting` / `recording` / `stopping` 都没有可交付文件，`failed` / `cancelled` 更不会交付。
+- 同一插件实例同一时刻只允许一个活动录制；同一工作区内的其它 Agent（含子智能体）可凭 `recordingId` 协作，跨工作区一律 `recording_workspace_mismatch`；DSH/插件重启后旧 id 失效。
+- 编码固定：`libx264` / `veryfast` / CRF 14 / `yuv420p` / `+faststart`、无音频；**没有 gdigrab 或低帧率回退**，`stop` 会做 FFprobe（`-count_frames`）+ 完整解码校验，不通过就不发布。
+
+### 页面截图 vs 屏幕截图
+
+`capture_screenshot` 抓的是**桌面上真实显示的内容**（物理像素，永不放大）。因此：
+
+- **页面没显示在屏幕上**（无头浏览器、离屏渲染、最小化窗口）：本插件抓不到，这不是它的场景。请用页面渲染侧（如 CDP）截页面内容，并把 `deviceScaleFactor` 设成 `capture_probe` 返回的 `displays[].scaleFactor`（本机为 2），或用 `Page.captureScreenshot` 的 `clip.scale`；输出 PNG，事后别再缩放。
+- **页面 / 窗口确实显示在屏幕上**：用本插件，`target:"window"` 或 `target:"display"`；要看清细字用 `target:"region"` 裁 1:1 区域。
+- **模型看到的图偏小**：附件库会降采样（3072×1920 → 约 2590×1619，`model_image_downscaled`），磁盘文件仍然清晰。
+
 ## 配置
 
 可选项写在本插件行的 `config:` 里，全部可省略：
@@ -141,7 +178,11 @@ dsh plugin add dsh-plugin-control-your-capture
 
 ## 已知限制
 
-- **只做截图**：能力范围就是 `display`、`window`、`region` 三类目标，没有别的采集形态，也没有 UI 面板；被移除的旧能力见「从 0.1.x 迁移」。
+- **能力范围 = 截图 + Windows 单屏录屏**：截图覆盖 `display` / `window` / `region`；录屏只有 Windows 单屏 console 的 `display` / `region`。没有 UI 面板，也没有别的采集形态。
+- **录屏的限制**：不做音频、不做 `window` / 多屏 / HDR / RDP / 会话 0，macOS 与 Linux 不提供录制；`yuv420p` 有损，**不与 PNG 逐像素一致**，也没有无损模式。
+- **录屏依赖外部 FFmpeg / FFprobe**（需 ddagrab + libx264）：缺失时 `backend_unavailable` 并逐项列在 `missing`，不自动下载、不捆绑。
+- **硬杀宿主**（崩溃 / 强杀）后的孤儿 FFmpeg 与 `.tmp-*.mp4` 不保证清理（0.3.0 未实现 Job Object）。
+- **就绪语义**：`start` 的就绪条件是“进程存活 + 临时文件非空（头部）”；FFmpeg 的输出缓冲可能让视频数据直到 `stop` 才完全落盘，交付质量由 `stop` 的 FFprobe + 完整解码把关。
 - Windows 只有单屏 console 实测到 beta；多屏、混合 DPI、HDR、RDP、会话 0、安全桌面都没有声称支持。
 - macOS、Linux X11 与 Wayland **零真机**，只能 experimental；Wayland 可能弹授权，且不支持单窗口目标。
 - `target:"all"` 不支持；跨显示器区域会被拒绝（请分别截图）。
@@ -152,6 +193,12 @@ dsh plugin add dsh-plugin-control-your-capture
 - 超时后虽然会清理整个进程树，但**真实采集超时在本机没有触发过**（只有机制级验证）；这一条在升级到 stable 前不会改口径。
 
 ## 从 0.1.x 迁移（破坏性）
+
+### 0.3.0：录屏回来了，但不是旧脚本
+
+0.3.0 重新提供录屏，形态是 Host 内的 **`capture_recording` 工具**（DDA + libx264 + MP4 原子发布），**不是** 0.1.x 的 `rec.ps1` / `capture.sh rec`；技能里仍然**没有任何脚本**，不存在第二套执行路径。升级路径：卸载旧版 → 安装 0.3.0 → 重启 DSH。
+
+### 0.2.0 的破坏性变更（历史）
 
 0.2.0 删除了 0.1.x 的录屏与网页截图能力，也删除了技能内的全部脚本：采集只剩 `capture_screenshot` 这一条执行路径。
 

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Sharp screenshots",
-    "description": "capture_screenshot grabs a display, a window or a region at physical pixels and hands the image straight to the model; unsupported environments fail loudly and nothing is ever upscaled."
+    "title": "Sharp screenshots and recordings",
+    "description": "capture_screenshot grabs a display, a window or a region at physical pixels and hands the image straight to the model; capture_recording turns a display or a physical-pixel region into a decodable MP4 on Windows single-display console sessions. Unsupported environments fail loudly and nothing is ever upscaled."
   }
 }

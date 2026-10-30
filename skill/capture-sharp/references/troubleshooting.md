@@ -1,6 +1,6 @@
-# 症状 → 原因 → 修法（只覆盖截图）
+# 症状 → 原因 → 修法（截图 + 录屏）
 
-先调 `capture_probe`（不截图、不写图片）：显示器物理边界与 id、可用后端与缺失工具、权限、输出根可写性、每个目标的支持等级都在里面。
+先调 `capture_probe`（不截图、不写图片）：显示器物理边界与 id、可用后端与缺失工具、权限、输出根可写性、每个目标的支持等级都在里面；录屏能力看并列的 `recording` 对象（`available/backend/grade/targets/missing/reason`）。
 
 ## 错误码速查
 
@@ -19,6 +19,35 @@
 | `invalid_output` | 文件为空、不是 PNG、缺 IEND、尺寸不符、附件库拒收、父目录不可写 | 重试；连续失败按后端不可用处理 |
 
 `quality_unverified` 与 `skill_shadowed` **不是**失败码：前者说明无法证明输出为原生质量（图仍然交付），后者说明引导技能被用户副本遮蔽（工具照常可用）。
+
+## 录屏：错误与状态速查
+
+录屏失败同样 `throw`，首行为 `capture_recording failed [<code>]: …`，具体原因在 `details.reason`。
+
+| code / state | 多半因为 | 怎么办 |
+|---|---|---|
+| `backend_unavailable`，`missing` 含 `ffmpeg`/`ffprobe`/`ddagrab`/`libx264` | 缺外部 FFmpeg（或版本不带 ddagrab / libx264） | 装带 ddagrab filter 与 libx264 的 FFmpeg；**截图不受影响**，别把它当截图失败 |
+| `invalid_argument` / `recording_not_found` | id 来自旧 Host、抄错或来自别处 | DSH/插件重启后旧 id 一律失效；重新 `start` |
+| `invalid_argument` / `recording_workspace_mismatch` | 在另一个工作区操作别人的 recordingId | 用发起 `start` 的同一工作区；不要跨工作区猜路径 |
+| `invalid_argument` / `recording_already_active` | 本插件实例已有活动录制 | 先 `stop` 或 `cancel` 那个会话，再 start |
+| `invalid_argument` / `recording_state_conflict` | 对 failed/cancelled 再 stop，或 stop/cancel 互抢 | `status` 看终态；failed+cancel 可重试清理，其它不要再停 |
+| `invalid_region` / `region_odd_dimensions` | region 宽或高是奇数 | 改成偶数物理像素；工具不会补边或缩放 |
+| `invalid_region` / `region_out_of_bounds` | region 越出显示器 | 用 probe 的物理 bounds 重算，不能跨屏 |
+| `capture_timeout` / `startup_timeout` | 启动 10s 内 FFmpeg 未就绪或立即失败 | 跑 probe 看 recording.missing；重试一次，仍失败如实报告 |
+| `capture_timeout` / `stop_timeout` | q 后 15s 内 FFmpeg 仍未退出 | 该 MP4 未被封装/校验，**不是成品**；重新录 |
+| `capture_failed` / `unexpected_exit` | 录制中 FFmpeg 自行退出（含 exit 0） | 看 `details.stderrTail`；会话已 failed，重新 start |
+| `invalid_output` | 尺寸/帧数/帧率/完整解码/封装任一不合格 | 该文件不作为成品交付；重录或换更小 region |
+| `starting` / `recording` / `stopping` | 还没结束，不是错误 | 用同一个 recordingId 轮询 `status`；**没有交付物** |
+
+录屏症状：
+
+| 现象 | 原因 | 修法 |
+|---|---|---|
+| 实测帧率明显偏低 | 机器负载、画面复杂度或驱动；工具不会自动降档或回退 gdigrab | 如实报告实测 fps；需要时可缩小 region 或降到 30fps 档，**不要**声称已 60fps |
+| `stop` 很慢或超时 | stop 要等封装 + FFprobe + 完整解码 | 等它返回；超时按 `capture_timeout` 如实报告，不要把临时文件当成品 |
+| MP4 不如同区域 PNG 锐 | yuv420p 有损编码，色度抽样可能改变彩色边缘 | 不承诺无损或与 PNG 逐像素一致；要逐像素对照就用截图 |
+| 多屏 / HDR / RDP / 会话 0 / window 录不了 | 0.3.0 只支持 Windows 单屏 console 的 display/region（beta） | 看 `recording.targets`，明确告诉用户这些环境未验证 |
+| 录屏进程被强杀后留下孤儿/临时文件 | 未实现 Job Object，硬崩溃清理不保证 | 手动结束残留 FFmpeg 并删除 `.tmp-*.mp4`；如实说明 |
 
 ## 平台与权限
 
@@ -43,10 +72,12 @@
 | 想放大却得不到更大的图 | 工具永不放大，`maxWidth` 只缩小 | 提高显示器分辨率或裁更小的区域，不要要求放大 |
 | 尺寸对但文字仍发虚 | 采集后被二次缩放 | 只用本工具，不要再手动缩放一次 |
 | 图整幅发黑或纯色，但调用是成功的 | 后端检测到近似单一颜色（受保护内容、空窗口、最小化） | 看 `warnings` 里的 `content_uniform`；图仍交付，但要如实告诉用户"这很可能不是想截的内容"，再换目标或让窗口可见 |
+| 截图糊、字发虚，但尺寸看着对 | 先分清是**页面截图**还是**屏幕截图**：无头/离屏/最小化页面不在屏幕上，本工具抓的只是当时屏幕内容；另一种是把页面按 `deviceScaleFactor:1` 渲染后当屏幕图用（2× 屏上只有一半分辨率） | 页面在屏幕上就用本工具（`window`/`display`，细字用 `region`）；页面不在屏幕上就用渲染侧截图并把 DPR 设成 `capture_probe` 的 `scaleFactor`（本机 2），输出 PNG 别再缩放 |
 
 ## 不要这样做
 
-- 手写 PowerShell、AppleScript 或任何采集命令绕过工具（那会成为第二套执行路径）。
-- 在 `no_display` / `permission_required` 下反复重试，或把失败写成「已截图」。
+- 手写 PowerShell、AppleScript、FFmpeg、gdigrab 或任何采集命令绕过工具（那会成为第二套执行路径）。
+- 把录屏 `starting/recording/stopping` 的返回或 `.tmp-*.mp4` 当成交付物；只有 completed 的 `path` 才是成品。
+- 在 `no_display` / `permission_required` 下反复重试，或把失败写成「已截图」「已录屏」。
 - 把 `target:"all"` 当成可用目标。
-- 对外宣称「全平台支持」——没有真机实测的平台只能 experimental。
+- 对外宣称「全平台支持」或「无损录屏」——没有真机实测的平台只能 experimental，MP4 是 yuv420p 有损。

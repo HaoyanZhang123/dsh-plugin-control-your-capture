@@ -2,9 +2,9 @@
 
 <h1 align="center">dsh-plugin-control-your-capture</h1>
 
-> panel plugin v0.2.2 · skill v0.2.2
+> panel plugin v0.3.0 · skill v0.3.0
 
-<p align="center">A screenshot tool for DSH: capture a display, a window or a region at physical pixels; the result carries both a PNG on disk and an attachment reference.</p>
+<p align="center">Screenshot and screen-recording tools for DSH: capture a display, a window or a region at physical pixels, and record a display or region to MP4 on a single-display Windows console session.</p>
 
 <p align="center">
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-%E2%89%A5%2018-339933?logo=nodedotjs&logoColor=white" alt="Node 18+"></a>
@@ -49,7 +49,8 @@ This plugin ships the fix as a **tool**, not as a pile of scripts. On mount it r
 | Capability | What it does |
 |---|---|
 | `capture_screenshot` | Captures `display`, `window` or `region` targets; PNG by default, no scaling by default |
-| `capture_probe` | Diagnostics only, never captures: displays, available backends, permissions, output root, skill health, per-target support level |
+| `capture_probe` | Diagnostics only, never captures: displays, available backends, permissions, output root, skill health, per-target support level, and recording capability (`recording`) |
+| `capture_recording` | Records `display` or a physical-pixel `region` to MP4 on a single-display Windows console session; `start` / `status` / `stop` / `cancel`, with the lifecycle owned by the host |
 | Native sharpness | Captures at the physical pixels the backend reports; `maxWidth` may downscale exactly once and the tool **never upscales** |
 | Two delivery channels | The same bytes are written to disk as a native PNG (`path`) and handed to the attachment store (`image`); the model-visible size may be normalized, so read `image.width` / `image.height` |
 | Concurrency-safe | Unique file name per call, same-directory temp file plus atomic rename; no overwrite, no half-written file |
@@ -70,15 +71,26 @@ Levels: `stable` means real-machine evidence including an actual image review; `
 | Linux X11 | experimental | experimental | experimental | No real hardware; needs maim, scrot or import |
 | Linux Wayland | experimental | unsupported | experimental | No real hardware; needs XDG Portal or grim, and may prompt for permission |
 | headless / CI | — | — | — | Always `no_display` |
-| Any platform + `target:"all"` | — | — | — | `unsupported_target` (not offered in 0.2.0) |
+| Any platform + `target:"all"` | — | — | — | `unsupported_target` (not offered in 0.3.0) |
 
 - This matrix matches what `capture_probe` returns in `targets`; any mismatch is a defect.
 - Only a measured platform x target pair may ever be called stable, and **no platform is claimed to work everywhere**.
 - The plugin does not hide other screenshot tools and does not force any preset or model to call it.
 
+Recording (`capture_recording`):
+
+| Platform / session | display | region | Evidence |
+|---|---|---|---|
+| Windows 10/11 console (single display, SDR) | **beta** | **beta** | Measured on this machine: 3072x1920 at 57.48fps and 800x500 at 57.45fps, 1 video / 0 audio, `-xerror` full decode passes, faststart effective; a 279.6s recording proves the old 120s timeout no longer applies |
+| Windows multi-display / HDR / RDP / session 0 | unsupported | unsupported | Explicitly rejected (`unsupported_target`), never a silent downgrade |
+| macOS / Linux | unsupported | unsupported | 0.3.0 offers no recording |
+| `target:"window"` / `target:"all"` | — | — | `unsupported_target` |
+
+Recording needs an external **FFmpeg (with the ddagrab filter and libx264)** and **FFprobe**: `capture_probe.recording.missing` lists what is missing, and missing them **only affects recording — screenshots keep working**.
+
 ## Installation
 
-Requirement: DSH installed. The package has no runtime dependency; capture uses what the OS already provides (GDI on Windows, screencapture on macOS, maim / scrot / import or Portal / grim on Linux).
+Requirement: DSH installed. The package has no runtime dependency; screenshots use what the OS already provides (GDI on Windows, screencapture on macOS, maim / scrot / import or Portal / grim on Linux), while **recording additionally needs an external FFmpeg (with ddagrab and libx264) and FFprobe**.
 
 ```bash
 dsh plugin add dsh-plugin-control-your-capture
@@ -117,6 +129,31 @@ Returned fields: `path` (absolute path of the PNG on disk), `width` / `height` (
 
 `content_uniform` means the backend saw an almost single-color frame (all black / flat color, typical for protected content or an empty window). The image is **still delivered**, but treat it as "this may not be what the user wanted to capture".
 
+### Recording: capture_recording
+
+| Parameter | Values | Notes |
+|---|---|---|
+| `action` | `start` / `status` / `stop` / `cancel` | Required |
+| `recordingId` | opaque id returned by `start` | Required for `status`/`stop`/`cancel`; not allowed on `start` |
+| `target` | `display` / `region` | Defaults to `display`; **`window` / `all` are unsupported** |
+| `display` | opaque id from `capture_probe` | Defaults to the single current display |
+| `region` | `{x,y,width,height}` | **Physical pixels** relative to the display origin; width and height must be even and fully on screen |
+| `fps` | `30` / `60` | Defaults to 60 |
+| `drawMouse` | boolean | Defaults to true |
+| `out` | workspace-relative `.mp4` | Defaults to `output/capture/<uuid>.mp4`; an existing name is never overwritten (a unique name plus `out_renamed` is used) |
+
+- `start` returns quickly with a `recordingId`; **`path` appears only on `completed`** — `starting` / `recording` / `stopping` have nothing deliverable, and `failed` / `cancelled` never deliver.
+- One active recording per plugin instance; other agents in the same workspace (including subagents) can cooperate with the same `recordingId`, a different workspace gets `recording_workspace_mismatch`, and ids do not survive a restart.
+- Fixed encoding: `libx264` / `veryfast` / CRF 14 / `yuv420p` / `+faststart`, no audio; **no gdigrab and no low-frame-rate fallback**, and `stop` enforces FFprobe (`-count_frames`) plus a full decode before publishing.
+
+### Page screenshots vs screen screenshots
+
+`capture_screenshot` captures **what is really displayed on the desktop** (physical pixels, never upscaled). So:
+
+- **The page is not on screen** (headless browser, offscreen rendering, minimized window): this plugin cannot see it and that is not its job. Use the rendering side (e.g. CDP) with `deviceScaleFactor` set to `capture_probe`'s `displays[].scaleFactor` (2 on this machine), or `Page.captureScreenshot` with `clip.scale`; emit PNG and do not downscale afterwards.
+- **The page / window is on screen**: use this plugin with `target:"window"` or `target:"display"`; for fine text use `target:"region"` to crop a 1:1 area.
+- **The image looks small to the model**: the attachment store downscales it (3072x1920 → about 2590x1619, `model_image_downscaled`); the file on disk stays sharp.
+
 ## Configuration
 
 Optional keys on this plugin's row under `config:`:
@@ -136,7 +173,11 @@ When the plugin is disabled or removed while DSH is running, the `capture-sharp`
 
 ## Known limitations
 
-- **Screenshots only**: the whole scope is the `display` / `window` / `region` targets, with no other capture shape and no UI panel; the migration section lists what was removed.
+- **Scope = screenshots plus single-display Windows recording**: screenshots cover `display` / `window` / `region`; recording covers `display` / `region` on a single-display Windows console session. There is no UI panel.
+- **Recording limits**: no audio, no `window` / multi-display / HDR / RDP / session 0, no macOS or Linux recording; `yuv420p` is lossy and **not pixel-identical to PNG**, and there is no lossless mode.
+- **Recording needs external FFmpeg / FFprobe** (ddagrab + libx264): when missing, the call fails with `backend_unavailable` and lists each item in `missing`; nothing is downloaded or bundled.
+- **Hard-kill leftovers**: after a crash or force-quit, orphan FFmpeg processes and `.tmp-*.mp4` files are not guaranteed to be cleaned (0.3.0 has no Job Object).
+- **Readiness semantics**: `start` means "the process is alive and the temp file is non-empty (header)"; FFmpeg output buffering can keep video data off disk until `stop`, and delivery quality is enforced by the `stop` FFprobe + full-decode validation.
 - Windows is measured at beta only for single-display console sessions; multi-display, mixed DPI, HDR, RDP, session 0 and the secure desktop are not claimed.
 - macOS, Linux X11 and Wayland have **no real hardware evidence** and stay experimental; Wayland may prompt for permission and does not support a single-window target.
 - `target:"all"` is not supported, and regions spanning two displays are rejected (capture them separately).
@@ -148,6 +189,12 @@ When the plugin is disabled or removed while DSH is running, the `capture-sharp`
 - A timeout kills the whole process tree, but **a real capture timeout has never fired on this machine** (only mechanism-level verification); that wording will not change until the target is promoted to stable.
 
 ## Migrating from 0.1.x (breaking)
+
+### 0.3.0: recording is back, but not as the old script
+
+0.3.0 brings recording back as the host-side **`capture_recording` tool** (DDA + libx264 + atomic MP4 publishing), **not** the 0.1.x `rec.ps1` / `capture.sh rec`; the skill still contains **no scripts**, so there is no second execution path. Upgrade path: uninstall the old version, install 0.3.0, restart DSH.
+
+### The 0.2.0 breaking change (history)
 
 0.2.0 removes the screen recording and page capture abilities of 0.1.x and deletes every script that used to live in the skill: `capture_screenshot` is now the single execution path.
 

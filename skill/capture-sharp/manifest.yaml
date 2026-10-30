@@ -1,9 +1,9 @@
 name: capture-sharp
-version: 0.2.2
-description: 按物理像素抓显示器、窗口与区域的清晰截图：优先调用 capture_screenshot，失败或需要环境事实时用 capture_probe
+version: 0.3.0
+description: 按物理像素抓显示器、窗口与区域的清晰截图，以及在 Windows 单屏 console 录屏：截图优先调用 capture_screenshot，录屏用 capture_recording（start/status/stop/cancel），失败或需要环境事实时用 capture_probe
 always_load: []
 axes: {}
 references:
   on_demand:
-    - condition: "截图失败、权限或显示服务不可用、尺寸与清晰度判断不清、平台支持等级存疑时必读"
+    - condition: "截图或录屏失败、权限或显示服务不可用、尺寸/清晰度/帧率判断不清、平台支持等级存疑时必读"
       path: references/troubleshooting.md

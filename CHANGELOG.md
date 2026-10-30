@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.3.0
+
+**新增录屏**：在截图之外加入 Host 录屏工具 `capture_recording`（Windows 单屏 console，beta）；截图行为不回归。
+
+### 新增
+
+- `capture_recording`：四种 action `start` / `status` / `stop` / `cancel`，把 `display` 或物理像素 `region` 录成 MP4。`start` 返回 `recordingId` 且不交付任何路径；**`path` 只在 `completed` 出现**，并带实测 `width` / `height` / `actualFps` / `actualFpsSource` / `durationSec` / `durationSource` / `frameCount` / `frameCountSource` / `bytes` / `pixelFormat`。
+- 固定编码契约：Windows DDA `ddagrab` + `libx264`（veryfast / CRF 14）+ `yuv420p` + `+faststart`，原生分辨率、默认请求 60fps、无音频；region 只做精确裁剪，不缩放。
+- `capture_probe` 新增并列的 `recording` 对象（`available` / `backend` / `grade` / `targets` / `missing` / `reason` / `sourceDpiAware`）：外部 FFmpeg / FFprobe / ddagrab / libx264 与 console / 单屏 / DPI 事实一目了然；录屏不可用不影响截图。
+- 新配置 `recordingMaxDurationSec`（默认 3600，整数 1–86400）：到上限由 Host 自动走正常 finalization；非法值让插件直接失败，不静默替换。
+- 会话绑定规范化后的工作区（`randomUUID` capability + canonical root）：同一工作区的其它 Agent（含子智能体）可继续 `status` / `stop` / `cancel`；跨工作区拒绝为 `recording_workspace_mismatch` 且不泄漏 owner 路径。
+- Windows 单屏 console 的 display / region 支持等级升为 **beta**：证据为 `evals/recording-0.3.0/windows-e2e.md`（T3，R1–R7 全部通过）。
+
+### 限制
+
+- 录屏只在 Windows 10/11 单屏 console、SDR、非 RDP 环境提供；多屏、HDR、RDP、会话 0、安全桌面、window 与 macOS/Linux 录屏不支持或未验证，不借单屏结果升级。
+- 依赖外部 FFmpeg / FFprobe（`ffmpeg` 必须带 `ddagrab` 与 `libx264`）：缺失只影响录屏，截图照常可用；插件不静默下载或捆绑。
+- 没有 gdigrab、循环截图或低帧率回退；默认 `yuv420p` 有损 MP4，**不与 PNG 逐像素一致**，也没有无损模式。
+- 硬杀宿主后的孤儿进程与临时文件不保证清理（0.3.0 未实现 Job Object）；正常 stop / cancel / 卸载会尽力回收。
+- 实测只引用 T3 真机结果：display 3072×1920 请求 60fps → **57.80fps / 11.33s**；region 800×500 请求 60fps → **56.65fps**；长录制 800×500@30fps → **29.99fps / 126.43s**；max-duration → **2.57s** 自动 completed。不承诺任意负载、任意内容都满 60fps。
+
+### 升级
+
+- 卸载旧版 → 安装 0.3.0 → 重启 DSH（已安装插件不支持自动更新）。
+- 技能仍无 `scripts/`；0.3.0 的录屏是 Host 工具，不是恢复 `rec.ps1` / `capture.sh rec`，也没有第二套命令。
+- 版本同步：`plugin/package.json`、`.dsh/skills/capture-sharp/manifest.yaml` 与技能 README 的 `版本：` 行。
+
 ## 0.2.2
 
 **文档更新**（采集行为未变）

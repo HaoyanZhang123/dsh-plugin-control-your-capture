@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "高清截图",
-    "description": "capture_screenshot 按物理像素抓显示器、窗口或区域，图片直接返回给模型；不支持的环境明确报错，永不放大。"
+    "title": "高清截图与录屏",
+    "description": "capture_screenshot 按物理像素抓显示器、窗口或区域，图片直接返回给模型；capture_recording 在 Windows 单屏 console 把显示器或物理像素区域录成可解码的 MP4。不支持的环境明确报错，永不放大。"
   }
 }
