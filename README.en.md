@@ -31,6 +31,10 @@ Intended for agents and users who need reliable, sharp screen evidence inside DS
 - **Structured failures**: every failure carries `code` / `message` / `details` / `hint`; nothing degrades silently.
 - **Zero runtime dependencies**: Node built-ins only; FFmpeg / FFprobe are explicitly probed external capabilities, and missing them only affects recording.
 
+The same screen region at the same moment, changing only the sampling resolution (left: physical pixels 800x500; right: logical pixels 400x250 upscaled 2x):
+
+![Physical-pixel capture vs logical-pixel upscale: the left text is sharp, the right text is soft and 1px lines smear into grey](./assets/compare-native-vs-logical.webp)
+
 ## Support matrix
 
 Grades: `stable` has real-machine evidence plus image review; `beta` is complete but only partly measured; `experimental` has no real-machine evidence; `unsupported` is rejected explicitly, never silently downgraded.
